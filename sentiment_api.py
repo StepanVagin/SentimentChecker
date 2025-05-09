@@ -8,12 +8,13 @@ import re
 
 app = FastAPI(title="Sentiment Analysis API", description="API for sentiment regression and word highlighting.")
 
-# Load model and tokenizer
-MODEL_NAME = "cardiffnlp/twitter-roberta-base"  # Example; replace with regression model if available
-MODEL_PATH = "final_model/"
-TOKENIZER_PATH = "final_model/"
-tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+MODEL_NAME = "StepanVagin/nlptown-bert-base-multilingual-uncased-sentiment-fine-tuned"
+TOKENIZER_PATH = MODEL_NAME
+MODEL_PATH = MODEL_NAME
+
+# Load model and tokenizer from Hugging Face
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model.eval()
 
 class SentimentRequest(BaseModel):
