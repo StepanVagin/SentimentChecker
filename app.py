@@ -24,7 +24,7 @@ def show_landing():
             Get clear, actionable insights for better communication.
         </div>
         <div style='font-size:1em;margin-bottom:1.2em;color:#888;'>
-            <b>System Accuracy:</b> ~85%
+            <b>AI can make mistakes, use answers only for reference</b>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -88,7 +88,7 @@ st.title("Sentiment Analysis Interface")
 
 st.markdown("""
 <div style='font-size:1em;color:#888;margin-bottom:0.7em;'>
-<b>Warning:</b> Sentiment analysis is approximate. System accuracy: ~85%.
+<b>Warning:</b> AI can make mistakes, use answers only for reference.
 </div>
 """, unsafe_allow_html=True)
 
@@ -190,51 +190,7 @@ if "stage" not in st.session_state:
 def set_stage(i):
     st.session_state.stage = i
 
-if st.session_state.stage == 10:
-    # Show analysis result and highlights if available
-    if (
-        ("last_user_input" in st.session_state and st.session_state["last_user_input"]) and
-        ("last_sentiment" in st.session_state and "last_score" in st.session_state and "last_highlights" in st.session_state)
-    ):
-        with result_container:
-            score = st.session_state["last_score"]
-            sentiment = st.session_state["last_sentiment"]
-            print(sentiment)
-            highlights = st.session_state["last_highlights"]
-            if sentiment == "Positive":
-                sentiment_color = "#21bf21"
-            elif sentiment == "Neutral":
-                sentiment_color = "#ffdc00"
-            else:
-                sentiment_color = "#c00000"
-            st.markdown(f"**Sentiment Score:** {score}")
-            st.markdown(f'<span style="font-size:1.3em;font-weight:bold;color:{sentiment_color}">{sentiment}</span>', unsafe_allow_html=True)
-            st.markdown("**Word Importance:**")
-            highlighted = []
-            for h in highlights:
-                imp = float(h["importance"])
-                if sentiment == "Positive":
-                    color = f"rgba(0, 200, 0, {imp})"
-                elif sentiment == "Negative":
-                    color = f"rgba(200, 0, 0, {imp})"
-                else:
-                    color = f"rgba(128, 128, 128, {imp})"
-                highlighted.append(f'<span style="background-color:{color};padding:2px 4px;border-radius:4px">{h["word"]} <span style="font-size:0.9em;color:#333;opacity:0.7;">({imp:.2f})</span></span>')
-            st.markdown(" ".join(highlighted), unsafe_allow_html=True)
-            if st.button("What's wrong?",on_click=set_stage, args=[1], key="feedback_btn"):
-                st.session_state["actual_score"] = score
-            # st.markdown(f"**Input Text:** <span style='color:#444;font-size:1.08em'>{st.session_state['last_user_input']}</span>", unsafe_allow_html=True)
 
-            for h in highlights:
-                imp = float(h["importance"])
-                if sentiment == "Positive":
-                    color = f"rgba(0, 200, 0, {imp})"
-                elif sentiment == "Negative":
-                    color = f"rgba(200, 0, 0, {imp})"
-                else:
-                    color = f"rgba(128, 128, 128, {imp})"
-                highlighted.append(f'<span style="background-color:{color};padding:2px 4px;border-radius:4px">{h["word"]} <span style="font-size:0.9em;color:#333;opacity:0.7;">({imp:.2f})</span></span>')
-            st.markdown(" ".join(highlighted), unsafe_allow_html=True)
 if st.session_state.stage == 0:
     if analyze_button and st.session_state["input_text"].strip():
         with st.spinner("Analyzing..."):
@@ -243,19 +199,39 @@ if st.session_state.stage == 0:
                 if response.status_code == 200:
                     result = response.json()
                     score = result["score"]
+                    score = score * 4
                     highlights = result["highlights"]
                     # Only keep the latest highlights
                     st.session_state["last_highlights"] = highlights
                     if "editable_highlights" in st.session_state:
                         del st.session_state["editable_highlights"]
-                    if score >= 1.5:
-                        sentiment = "Positive"
+                    # New: Multi-level sentiment classification
+                    if score >= 8.0:
+                        sentiment = "High Positive"
                         sentiment_color = "#21bf21"
-                    elif score <= 1.5 and score >= 0.75:
-                        sentiment = "Neutral"
+                    elif score >= 7.0:
+                        sentiment = "Medium Positive"
+                        sentiment_color = "#4be04b"
+                    elif score >= 6.0:
+                        sentiment = "Low Positive"
+                        sentiment_color = "#8ff78f"
+                    elif score >= 5.0:
+                        sentiment = "High Neutral"
                         sentiment_color = "#ffdc00"
+                    elif score >= 4.5:
+                        sentiment = "Medium Neutral"
+                        sentiment_color = "#ffe066"
+                    elif score >= 4.0:
+                        sentiment = "Low Neutral"
+                        sentiment_color = "#fff3b0"
+                    elif score >= 3.0:
+                        sentiment = "Low Negative"
+                        sentiment_color = "#ffb3b3"
+                    elif score >= 2.5:
+                        sentiment = "Medium Negative"
+                        sentiment_color = "#ff6666"
                     else:
-                        sentiment = "Negative"
+                        sentiment = "High Negative"
                         sentiment_color = "#c00000"
                     st.session_state["last_user_input"] = st.session_state["input_text"]
                     st.session_state["last_sentiment"] = sentiment
@@ -265,14 +241,19 @@ if st.session_state.stage == 0:
                     st.markdown(f'<span style="font-size:1.3em;font-weight:bold;color:{sentiment_color}">{sentiment}</span>', unsafe_allow_html=True)
                     st.markdown("**Word Importance:**")
                     highlighted = []
+                    positive_sentiment_words = ["High Positive", "Medium Positive", "Low Positive"]
+                    negative_sentiment_words = ["High Negative", "Medium Negative", "Low Negative"]
+                    neutral_sentiment_words = ["High Neutral", "Medium Neutral", "Low Neutral"]
                     for h in highlights:
                         imp = float(h["importance"])
-                        if sentiment == "Positive":
+                        if sentiment in positive_sentiment_words:
                             color = f"rgba(0, 200, 0, {imp})"
-                        elif sentiment == "Negative":
+                        elif sentiment in negative_sentiment_words:
                             color = f"rgba(200, 0, 0, {imp})"
-                        else:
+                        elif sentiment in neutral_sentiment_words:
                             color = f"rgba(128, 128, 128, {imp})"
+                        else:
+                            color = f"rgba(180, 180, 180, {imp})"
                         highlighted.append(f'<span style="background-color:{color};padding:2px 4px;border-radius:4px">{h["word"]} <span style="font-size:0.9em;color:#333;opacity:0.7;">({imp:.2f})</span></span>')
                     st.markdown(" ".join(highlighted), unsafe_allow_html=True)
                     st.session_state["last_user_input"] = st.session_state["input_text"]
@@ -291,37 +272,43 @@ if st.session_state.stage == 0:
 
 if st.session_state.stage == 1:
     with feedback_container:
-        st.markdown("**If the sentiment is wrong, please provide the actual sentiment score below (0 = extremely negative, 2.5 = extremely positive):**")
         with result_container:
+            positive_sentiment_words = ["High Positive", "Medium Positive", "Low Positive"]
+            negative_sentiment_words = ["High Negative", "Medium Negative", "Low Negative"]
+            neutral_sentiment_words = ["High Neutral", "Medium Neutral", "Low Neutral"]
             score = st.session_state["last_score"]
             sentiment = st.session_state["last_sentiment"]
-            print(sentiment)
             highlights = st.session_state["last_highlights"]
-            if sentiment == "Positive":
+            if sentiment in positive_sentiment_words:
                 sentiment_color = "#21bf21"
-            elif sentiment == "Neutral":
+            elif sentiment in negative_sentiment_words:
                 sentiment_color = "#ffdc00"
             else:
                 sentiment_color = "#c00000"
             st.markdown(f"**Sentiment Score:** {score}")
             st.markdown(f'<span style="font-size:1.3em;font-weight:bold;color:{sentiment_color}">{sentiment}</span>', unsafe_allow_html=True)
             st.markdown("**Word Importance:**")
+            
             highlighted = []
             for h in highlights:
                 imp = float(h["importance"])
-                if sentiment == "Positive":
+                if sentiment in positive_sentiment_words:
                     color = f"rgba(0, 200, 0, {imp})"
-                elif sentiment == "Negative":
+                elif sentiment in negative_sentiment_words:
                     color = f"rgba(200, 0, 0, {imp})"
-                else:
+                elif sentiment in neutral_sentiment_words:
                     color = f"rgba(128, 128, 128, {imp})"
+                else:
+                    color = f"rgba(180, 180, 180, {imp})"
                 highlighted.append(f'<span style="background-color:{color};padding:2px 4px;border-radius:4px">{h["word"]} <span style="font-size:0.9em;color:#333;opacity:0.7;">({imp:.2f})</span></span>')
             st.markdown(" ".join(highlighted), unsafe_allow_html=True)
-            if st.button("What's wrong?",on_click=set_stage, args=[1], key="feedback_btn"):
-                st.session_state["actual_score"] = score
-
-
-        sentiment_options = ["Negative", "Neutral", "Positive"]
+      
+        st.markdown("**If the sentiment is wrong, please provide the actual sentiment score below (0 = extremely negative, 10 = extremely positive):**")
+        sentiment_options = [
+            "High Negative", "Medium Negative", "Low Negative",
+            "Low Neutral", "Medium Neutral", "High Neutral",
+            "Low Positive", "Medium Positive", "High Positive"
+        ]
         selected_sentiment = st.radio("Change Sentiment Classification", sentiment_options, index=sentiment_options.index(st.session_state["last_sentiment"]), key="sentiment_classification_radio")
         # Editable word importance sliders
         if "editable_highlights" not in st.session_state:
@@ -331,26 +318,40 @@ if st.session_state.stage == 1:
         for idx, h in enumerate(st.session_state["editable_highlights"]):
             col_word, col_slider = st.columns([2,4])
             with col_word:
-                st.markdown(f"<span style='color:#444;font-size:1.08em'>{h['word']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='font-size:1.1em'>{h['word']}</span>", unsafe_allow_html=True)
             with col_slider:
-                new_imp = st.slider("", 0.0, 1.0, float(h["importance"]), 0.01, key=f"imp_slider_{idx}")
-                new_importances.append(dict(word=h["word"], importance=new_imp))
+                imp = st.slider(f"Importance for {h['word']}", min_value=0.0, max_value=1.0, value=h["importance"], step=0.01, key=f"imp_slider_{idx}", label_visibility='hidden')
+            new_importances.append(dict(word=h["word"], importance=imp))
         st.session_state["editable_highlights"] = new_importances
-        st.markdown("---")
-        use_data = st.checkbox("Can we use your data to improve our system? (Required)", key="use_data_checkbox")
-        if st.button("Send Feedback", key="send_feedback_btn"):
-            if not use_data:
-                st.warning("You must allow data usage to send feedback.")
-            else:
-                save_feedback(
-                    st.session_state["last_user_input"],
-                    selected_sentiment,
-                    st.session_state["last_score"],
-                    st.session_state["actual_score"]
-                )
+        # Score slider
+        actual_score = st.slider("Actual Sentiment Score", min_value=0.0, max_value=10.0, value=st.session_state.get("actual_score", 1.25), step=0.01, key="sentiment_slider", label_visibility='hidden')
+        st.session_state["actual_score"] = actual_score
+        orig_col, new_col = st.columns([2,2])
+        with orig_col:
+            st.markdown(f"Original Score: <b>{st.session_state['last_score']}</b>", unsafe_allow_html=True)
+        with new_col:
+            st.markdown(f"New Score: <b>{st.session_state['actual_score']}</b>", unsafe_allow_html=True)
+        user_comment = st.text_area("Comment (optional)", value=st.session_state.get("feedback_comment", ""), key="feedback_comment_area")
+        can_use_data = st.checkbox("Can we use your data to improve our system?", value=st.session_state.get("can_use_data", False), key="can_use_data_checkbox")
+        send_report = st.button("Send Report", key="send_report_btn")
+        if send_report:
+            save_feedback(
+                st.session_state["last_user_input"],
+                selected_sentiment,
+                st.session_state["last_score"],
+                st.session_state["actual_score"]
+            )
+            st.session_state["feedback_comment"] = user_comment
+            st.session_state["can_use_data"] = can_use_data
+            time.sleep(1)
+            # st.switch_page("feedback_manager.py")
+            with feedback_container:
                 st.success("Thank you for your feedback!")
-                st.session_state.stage = 0
+                time.sleep(3)
+                set_stage(0)
                 st.rerun()
+
+            
 
     
         
